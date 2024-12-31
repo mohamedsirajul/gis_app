@@ -1361,7 +1361,7 @@ function PropertyDetails() {
                         </MenuItem>
                       ))}
                     </Select>
-                  {/*   
+                    {/*   
                   <TextField
                     label="Building Used As"
                     variant="outlined"
@@ -1522,26 +1522,27 @@ function PropertyDetails() {
                     label="Name of Assessee"
                     variant="outlined"
                     value={selectedOwner}
-                    onChange={(e, newValue) => setSelectedOwner(newValue)}
+                    onChange={(e) => setSelectedOwner(e.target.value)}
                   />
                                         
                 </FormControl>
               ) : (
                 <FormControl fullWidth className="mt-3">
-                    {/* <TextField
-                      label="Name of Assessee"
-                      variant="outlined"
-                      value={selectedOwner}
-                      onChange={(e) => setSelectedOwner(e.target.value)}
-                      disabled
-                    /> */}
-                     <Autocomplete
-                      options={OwnerOptions} // All Owner names including duplicates
-                      value={selectedOwner}
-                      onChange={(e, newValue) => setSelectedOwner(newValue)}
-                      renderInput={(params) => <TextField {...params} label="Name of Assessee" variant="outlined" />}
-                    />
-                  </FormControl>
+                  <Autocomplete
+                    options={OwnerOptions}
+                    value={selectedOwner}
+                    onChange={(_, newValue) => setSelectedOwner(newValue)}
+                    renderInput={(params) => (
+                      <TextField 
+                        {...params} 
+                        label="Name of Assessee" 
+                        variant="outlined"
+                        error={!selectedOwner && activeStep === 0}
+                        helperText={!selectedOwner && activeStep === 0 ? "Name of Assessee is required" : ""}
+                      />
+                    )}
+                  />
+                </FormControl>
               )}
                 </Col>
 
