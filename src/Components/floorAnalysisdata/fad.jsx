@@ -24,6 +24,11 @@ import {
   Toolbar,
   Menu,
   MenuItem,
+  Pagination,
+  Box,
+  Select,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import { Visibility } from "@mui/icons-material";
 import AccountCircle from "@mui/icons-material/AccountCircle";
@@ -44,10 +49,14 @@ const Fad = () => {
 
   const [taxData, setTaxData] = useState({});
   const [facilityData, setFacilityData] = useState({});
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [page, perPage]);
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -67,21 +76,37 @@ const Fad = () => {
   }
 
   const fetchData = () => {
-    fetch("https://luisnellai.xyz/siraj/flooranalysisdata.php")
+    setLoading(true);
+    fetch(`https://luisnellai.xyz/siraj/flooranalysisdata.php?page=${page}&per_page=${perPage}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Network response was not ok");
         }
         return response.json();
       })
-      .then((data) => {
-        setData(data);
+      .then((responseData) => {
+        if (responseData.status === "success") {
+          setData(responseData.data);
+          setTotalPages(responseData.total_pages);
+          setTotalRecords(responseData.total_records);
+        } else {
+          throw new Error(responseData.message || "Failed to fetch data");
+        }
         setLoading(false);
       })
       .catch((error) => {
         setError(error);
         setLoading(false);
       });
+  };
+
+  const handlePageChange = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handlePerPageChange = (event) => {
+    setPerPage(event.target.value);
+    setPage(1); // Reset to first page when changing rows per page
   };
 
   const fetchDataByAssessmentNo = (assessmentNo) => {
@@ -232,43 +257,16 @@ const Fad = () => {
   //   }));
   //   console.log(updatedSubmittedData[0]);
   // };
-  if (loading) {
-    return (
-      <Container
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "100vh",
-        }}
-      >
-        <div>
-          <CircularProgress />
-        </div>
-      </Container>
-    );
-  }
 
-  if (error || !data) {
-    return (
-      <Container>
-        <Alert severity="error">
-          {error ? error.message : "Failed to fetch data"}
-        </Alert>
-      </Container>
-    );
-  }
-
-  const renderedAssessmentNos = new Set();
+  // Calculate serial number based on current page and perPage
+  const getSerialNumber = (index) => {
+    return ((page - 1) * perPage) + index + 1;
+  };
 
   return (
     <>
-      {" "}
-      <AppBar position="static" style={{ backgroundColor: "#eb3f2f" }}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            ATE Management
-          </Typography>
+      <AppBar position="static">
+        <Toolbar style={{ backgroundColor: "#eb3f2f" }}>
           <IconButton
             size="large"
             aria-label="account of current user"
@@ -279,6 +277,9 @@ const Fad = () => {
           >
             <AccountCircle />
           </IconButton>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            ATE Management
+          </Typography>
           <Menu
             id="menu-appbar"
             anchorEl={anchorEl}
@@ -305,235 +306,88 @@ const Fad = () => {
       </AppBar>
       <br />
       <Container>
-        <Card variant="outlined" style={{ marginTop: "20px" }}>
-          <CardContent>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-  <Typography variant="h6" component="h3" style={{ marginTop: "20px", textAlign: "center" }}>
-    <b>Assessment Tax Estimation</b>
-  </Typography>
-  <Button style={{ marginTop: "20px" , backgroundColor:"#f05b4d", color:"white" }} onClick={FilterAd} >Filter Assessments Information</Button>
-</div>
-
-
-            <TableContainer component={Paper} style={{ marginTop: "20px" }}>
-              <Table>
-                <TableHead
-                  style={{
-                    backgroundColor: "#f05b4d",
-                    border: "2px solid black",
-                    textAlign: "center",
-                  }}
+        {loading ? (
+          <Box display="flex" justifyContent="center" my={4}>
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Alert severity="error">Error: {error}</Alert>
+        ) : (
+          <>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                my: 2,
+                gap: 2
+              }}
+            >
+              <FormControl variant="outlined" size="small">
+                <InputLabel>Rows per page</InputLabel>
+                <Select
+                  value={perPage}
+                  onChange={handlePerPageChange}
+                  label="Rows per page"
+                  sx={{ minWidth: 120 }}
                 >
-                  <TableRow>
-                    <TableCell
-                      style={{
-                        fontWeight: "bold",
-                        border: "2px solid black",
-                        textAlign: "center",
-                        color: "white",
-                      }}
-                    >
-                      GIS ID
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        fontWeight: "bold",
-                        border: "2px solid black",
-                        textAlign: "center",
-                        color: "white",
-                      }}
-                    >
-                      Assessment No
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        fontWeight: "bold",
-                        border: "2px solid black",
-                        textAlign: "center",
-                        color: "white",
-                      }}
-                    >
-                      Floor
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        fontWeight: "bold",
-                        border: "2px solid black",
-                        textAlign: "center",
-                        color: "white",
-                      }}
-                    >
-                      Floor Area (in Sq.ft)
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        fontWeight: "bold",
-                        border: "2px solid black",
-                        textAlign: "center",
-                        color: "white",
-                      }}
-                    >
-                      Total Area (in Sq.ft)
-                    </TableCell>
-                    <TableCell
-                      style={{
-                        fontWeight: "bold",
-                        textAlign: "center",
-                        color: "white",
-                        border: "2px solid black",
-                      }}
-                    >
-                      Roof Area (Drone Survey in Sq.ft)
-                    </TableCell>
-{/* 
-                    <TableCell
-                      style={{
-                        fontWeight: "bold",
-                        border: "2px solid black",
-                        textAlign: "center",
-                        color: "white",
-                      }}
-                    >
-                      Add Tax
-                    </TableCell> */}
-                    <TableCell
-                      style={{
-                        fontWeight: "bold",
-                        border: "2px solid black",
-                        textAlign: "center",
-                        color: "white",
-                      }}
-                    >
-                      View Tax Details
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody
-                  style={{
-                    border: "2px solid black",
-                    textAlign: "center",
-                  }}
-                >
-                  {data.map((item, index) =>
-                    item.floors.map((floor, floorIndex) =>
-                      floor.floordetails.map((detail, detailIndex) => (
-                        <TableRow
-                          key={`${item.gisid}-${floorIndex}-${detailIndex}`}
-                          style={{
-                            border: "2px solid black",
-                            textAlign: "center",
-                          }}
-                        >
-                          {detailIndex === 0 && (
-                            <TableCell
-                              rowSpan={floor.floordetails.length}
-                              style={{
-                                border: "2px solid black",
-                                textAlign: "center",
-                              }}
-                            >
-                              {item.gisid}
-                            </TableCell>
-                          )}
-                          <TableCell
-                            style={{
-                              border: "2px solid black",
-                              textAlign: "center",
-                            }}
-                          >
-                            {detail.properties.AssessmentNo}{" "}
-                          </TableCell>
-                          {detailIndex === 0 && (
-                            <TableCell
-                              rowSpan={floor.floordetails.length}
-                              style={{
-                                border: "2px solid black",
-                                textAlign: "center",
-                              }}
-                            >
-                              {floor.floor}
-                            </TableCell>
-                          )}
-                          <TableCell
-                            style={{
-                              border: "2px solid black",
-                              textAlign: "center",
-                            }}
-                          >
-                            {detail.area}
-                          </TableCell>
-                          {detailIndex === 0 && (
-                            <TableCell
-                              rowSpan={floor.floordetails.length}
-                              style={{
-                                border: "2px solid black",
-                                textAlign: "center",
-                              }}
-                            >
-                              {floor.total_area}
-                            </TableCell>
-                          )}
-                          {detailIndex === 0 && (
-                            <TableCell
-                              rowSpan={floor.floordetails.length}
-                              style={{
-                                border: "2px solid black",
-                                textAlign: "center",
-                              }}
-                            >
-                              {item.drone_area}
-                            </TableCell>
-                          )}
-                          {/* <TableCell>
-                          <IconButton
-                            color="primary"
-                            onClick={() =>
-                              handleClickOpenPropertyDetails(detail.properties)
-                            }
-                          >
-                            <Visibility />
-                          </IconButton>
-                        </TableCell> */}
-                          {/* <TableCell
-                            style={{
-                              border: "2px solid black",
-                              textAlign: "center",
-                            }}
-                          >
-                            <Button
-                              style={{
-                                backgroundColor: "#f05b4d",
-                                color: "white",
-                              }}
-                              onClick={() =>
-                                handleClickOpenAddTaxDialog(
-                                  detail.properties,
-                                  floor,
-                                  detail,
-                                  detail.properties.AssessmentNo
-                                )
-                              }
-                            >
-                              Add Tax
-                            </Button>
-                          </TableCell> */}
-                          {detailIndex === 0 &&
-                            !renderedAssessmentNos.has(
-                              detail.properties.AssessmentNo
-                            ) && (
-                              <TableCell
-                                rowSpan={
-                                  renderedAssessmentNos.has(
-                                    detail.properties.AssessmentNo
-                                  )
-                                    ? 0
-                                    : floor.floordetails.length
-                                }
-                                style={{
-                                  border: "2px solid black",
-                                  textAlign: "center",
-                                }}
-                              >
+                  <MenuItem value={50}>50</MenuItem>
+                  <MenuItem value={100}>100</MenuItem>
+                  <MenuItem value={200}>200</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <Typography variant="body2" color="text.secondary">
+                Showing {((page - 1) * perPage) + 1} - {Math.min(page * perPage, totalRecords)} of {totalRecords} records
+              </Typography>
+            </Box>
+
+            <Card variant="outlined" style={{ marginTop: "20px" }}>
+              <CardContent>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography variant="h6" component="h3" style={{ marginTop: "20px", textAlign: "center" }}>
+                    <b>Assessment Tax Estimation</b>
+                  </Typography>
+                  <Button style={{ marginTop: "20px", backgroundColor: "#f05b4d", color: "white" }} onClick={FilterAd}>
+                    Filter Assessments Information
+                  </Button>
+                </div>
+
+                <TableContainer component={Paper} style={{ marginTop: "20px" }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow style={{ backgroundColor: "#f05b4d", border: "2px solid black" }}>
+                        <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>S.No</TableCell>
+                        <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>GIS ID</TableCell>
+                        <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>Assessment No</TableCell>
+                        <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>Floor</TableCell>
+                        <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>Floor Area (in Sq.ft)</TableCell>
+                        <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>Total Area (in Sq.ft)</TableCell>
+                        <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>Roof Area (Drone Survey in Sq.ft)</TableCell>
+                        <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>View Tax Details</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {data && data.map((item, index) =>
+                        item.floors.map((floor, floorIndex) =>
+                          floor.floordetails.map((detail, detailIndex) => (
+                            <TableRow key={`${item.gisid}-${floorIndex}-${detailIndex}`}>
+                              {detailIndex === 0 && (
+                                <TableCell rowSpan={floor.floordetails.length} sx={{ border: "2px solid black" }}>
+                                  {getSerialNumber(index)}
+                                </TableCell>
+                              )}
+                              {detailIndex === 0 && (
+                                <TableCell rowSpan={floor.floordetails.length} sx={{ border: "2px solid black" }}>
+                                  {item.gisid}
+                                </TableCell>
+                              )}
+                              <TableCell sx={{ border: "2px solid black" }}>{detail.properties.AssessmentNo}</TableCell>
+                              <TableCell sx={{ border: "2px solid black" }}>{floor.floor}</TableCell>
+                              <TableCell sx={{ border: "2px solid black" }}>{detail.area}</TableCell>
+                              <TableCell sx={{ border: "2px solid black" }}>{floor.total_area}</TableCell>
+                              <TableCell sx={{ border: "2px solid black" }}>{item.drone_area}</TableCell>
+                              <TableCell sx={{ border: "2px solid black" }}>
                                 <Button
                                   style={{
                                     backgroundColor: "#f05b4d",
@@ -548,16 +402,37 @@ const Fad = () => {
                                   View Tax Details
                                 </Button>
                               </TableCell>
-                            )}
-                        </TableRow>
-                      ))
-                    )
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </CardContent>
-        </Card>
+                            </TableRow>
+                          ))
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    my: 3,
+                    gap: 2
+                  }}
+                >
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={handlePageChange}
+                    color="primary"
+                    size="large"
+                    showFirstButton
+                    showLastButton
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </>
+        )}
         <Dialog
           open={openTaxDialog}
           onClose={handleCloseTaxDialog}
@@ -568,17 +443,6 @@ const Fad = () => {
             {selectedTaxes.length > 0 ? (
               selectedTaxes.map((property, index) => (
                 <div key={index}>
-                  {/* <Typography variant="h6">
-                  Assessment No: {property.AssessmentNo}
-                </Typography>
-                <Typography variant="h6">
-                  <b> Existing Tax: </b>
-                  {property.existing_tax}
-                </Typography>
-                <Typography variant="h6">
-                  <b> Proposed Tax: </b>
-                  {property.TotalFloorTax}
-                </Typography> */}
                   <Typography variant="h6">
                     Assessment Information - {property.zone}
                   </Typography>
