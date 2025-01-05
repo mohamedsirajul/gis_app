@@ -31,6 +31,8 @@ import {
   ListItemIcon,
   ListItemText,
   Snackbar,
+  Box,
+  Pagination,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import EditIcon from "@mui/icons-material/Edit";
@@ -45,6 +47,9 @@ const ViewSurvey = () => {
   const [selectedStreet, setSelectedStreet] = useState("");
   const [removing, setRemoving] = useState(false);
   const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
 
   const handleBack = () => {
     window.location.href = "/users";
@@ -53,6 +58,31 @@ const ViewSurvey = () => {
   useEffect(() => {
     fetchTasks();
   }, [user_id]);
+
+  useEffect(() => {
+    setTotalPages(Math.ceil(tasks.length / perPage));
+  }, [tasks, perPage]);
+
+  const handlePageChange = (event, value) => {
+    setPage(value);
+  };
+
+  const handlePerPageChange = (event) => {
+    setPerPage(event.target.value);
+    setPage(1);
+  };
+
+  const getCurrentTasks = () => {
+    const startIndex = (page - 1) * perPage;
+    const endIndex = startIndex + perPage;
+    return tasks.slice(startIndex, endIndex);
+  };
+
+  const getRecordsInfo = () => {
+    const startIndex = (page - 1) * perPage + 1;
+    const endIndex = Math.min(page * perPage, tasks.length);
+    return `Showing ${startIndex} - ${endIndex} of ${tasks.length} records`;
+  };
 
   const fetchTasks = async () => {
     try {
@@ -111,20 +141,27 @@ const ViewSurvey = () => {
         task.StreetName === selectedStreet
       );
 
-      const userId = tasksToRemove[0]?.user_id;
       const assessmentNumbers = tasksToRemove.map(task => task.AssesmentNo);
+
+      if (assessmentNumbers.length === 0) {
+        throw new Error("No tasks found to remove");
+      }
+
+      const postData = {
+        user_id: user_id,
+        ward_name: selectedWard,
+        street_name: selectedStreet,
+        assessment_numbers: assessmentNumbers
+      };
+
+      console.log('Sending data:', postData);
 
       const response = await fetch('https://luisnellai.xyz/siraj/admin/remove_assinedtask.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          user_id: userId,
-          ward_name: selectedWard,
-          street_name: selectedStreet,
-          assessment_numbers: assessmentNumbers,
-        }),
+        body: JSON.stringify(postData),
       });
 
       const result = await response.json();
@@ -136,15 +173,15 @@ const ViewSurvey = () => {
         ));
         setOpenDialog(false);
       } else {
-        setNotification({ 
-          open: true, 
-          message: result.message || 'Failed to remove tasks', 
-          severity: 'error' 
-        });
+        throw new Error(result.message || 'Failed to remove tasks');
       }
     } catch (error) {
       console.error('Error removing tasks:', error);
-      setNotification({ open: true, message: 'Error removing tasks', severity: 'error' });
+      setNotification({ 
+        open: true, 
+        message: error.message || 'Error removing tasks', 
+        severity: 'error' 
+      });
     } finally {
       setRemoving(false);
     }
@@ -156,7 +193,24 @@ const ViewSurvey = () => {
   };
 
   if (loading) {
-    return <CircularProgress />;
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          width: '100%',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          zIndex: 9999
+        }}
+      >
+        <CircularProgress size={60} style={{ color: "#eb3f2f" }} />
+      </Box>
+    );
   }
 
   if (error) {
@@ -198,20 +252,41 @@ const ViewSurvey = () => {
               </Button>
             </div>
 
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+              <FormControl variant="outlined" size="small">
+                <InputLabel>Rows per page</InputLabel>
+                <Select
+                  value={perPage}
+                  onChange={handlePerPageChange}
+                  label="Rows per page"
+                  sx={{ minWidth: 120 }}
+                >
+                  <MenuItem value={50}>50</MenuItem>
+                  <MenuItem value={100}>100</MenuItem>
+                  <MenuItem value={200}>200</MenuItem>
+                  <MenuItem value={500}>500</MenuItem>
+                </Select>
+              </FormControl>
+
+              <Typography variant="body2" color="text.secondary">
+                {getRecordsInfo()}
+              </Typography>
+            </Box>
+
             <TableContainer component={Paper}>
               <Table sx={{ minWidth: 650 }} aria-label="building-table">
                 <TableHead>
                   <TableRow>
-                    <TableCell>User Id</TableCell>
+                    <TableCell>S.No</TableCell>
                     <TableCell>Ward Name</TableCell>
                     <TableCell>Street Name</TableCell>
                     <TableCell>Assessment No</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {tasks.map((property, index) => (
+                  {getCurrentTasks().map((property, index) => (
                     <TableRow key={index}>
-                      <TableCell>{property.user_id}</TableCell>
+                      <TableCell>{(page - 1) * perPage + index + 1}</TableCell>
                       <TableCell>{property.WardName}</TableCell>
                       <TableCell>{property.StreetName}</TableCell>
                       <TableCell>{property.AssesmentNo}</TableCell>
@@ -220,6 +295,18 @@ const ViewSurvey = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={handlePageChange}
+                color="primary"
+                size="large"
+                showFirstButton
+                showLastButton
+              />
+            </Box>
 
             <Dialog 
               open={openDialog} 

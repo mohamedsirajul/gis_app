@@ -23,6 +23,8 @@ import {
   AppBar,
   Toolbar,
   Typography,
+  Box,
+  Pagination,
 } from "@mui/material";
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -50,27 +52,31 @@ const AssignTask = () => {
     StreetName: [],
   });
   const [additionalSelections, setAdditionalSelections] = useState([]);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await fetch(
-          `https://luisnellai.xyz/siraj/admin/getUserbyId.php/${user_id}`
-        );
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        const data = await response.json();
-        setUser(data);
-        setLoading(false);
-      } catch (error) {
-        setError(error);
-        setLoading(false);
-      }
-    };
+    // const fetchUser = async () => {
+    //   try {
+    //     const response = await fetch(
+    //       `https://luisnellai.xyz/siraj/admin/getUserbyId.php/${user_id}`
+    //     );
+    //     if (!response.ok) {
+    //       throw new Error("Network response was not ok");
+    //     }
+    //     const data = await response.json();
+    //     setUser(data);
+    //     setLoading(false);
+    //   } catch (error) {
+    //     setError(error);
+    //     setLoading(false);
+    //   }
+    // };
 
     const fetchProperties = async () => {
       try {
+        setLoading(true);
         const response = await fetch('https://luisnellai.xyz/siraj/getproperty.php', {
           method: 'GET',
           headers: {
@@ -98,9 +104,14 @@ const AssignTask = () => {
       }
     };
 
-    fetchUser();
+    // fetchUser();
     fetchProperties();
-  }, [user_id]);
+  }, []);
+
+  useEffect(() => {
+    setTotalPages(Math.ceil(filteredProperties.length / perPage));
+    setPage(1);
+  }, [filteredProperties, perPage]);
 
   useEffect(() => {
     console.log('Current properties:', properties);
@@ -121,13 +132,14 @@ const AssignTask = () => {
       console.log(filteredProps);
       setFilteredProperties(filteredProps);
       setSelectedStreets([]);
+      setPage(1);
     } else {
       const newAdditionalSelections = [...additionalSelections];
       newAdditionalSelections[index].WardName = value;
       newAdditionalSelections[index].StreetName = [];
       setAdditionalSelections(newAdditionalSelections);
-
       updateFilteredProperties(newAdditionalSelections);
+      setPage(1);
     }
   };
 
@@ -149,6 +161,7 @@ const AssignTask = () => {
             allStreets.includes(property.StreetName)
         );
         setFilteredProperties(filteredProps);
+        setPage(1);
       } else {
         setSelectedStreets(
           typeof value === "string" ? value.split(",") : value
@@ -160,6 +173,7 @@ const AssignTask = () => {
             value.includes(property.StreetName)
         );
         setFilteredProperties(filteredProps);
+        setPage(1);
       }
     } else {
       const newAdditionalSelections = [...additionalSelections];
@@ -167,8 +181,8 @@ const AssignTask = () => {
         typeof value === "string" ? value.split(",") : value;
 
       setAdditionalSelections(newAdditionalSelections);
-
       updateFilteredProperties(newAdditionalSelections);
+      setPage(1);
     }
   };
 
@@ -239,21 +253,18 @@ const AssignTask = () => {
 
     setLoading(true);
 
-    const combinedStreetNames = [
-      ...selectedStreets,
-      ...additionalSelections.flatMap((selection) => selection.StreetName),
-    ];
-
-    console.log(filteredProperties);
-    
     const postData = {
       user_id,
-      properties: filteredProperties,
-      created_at: new Date().toISOString(),
+      properties: filteredProperties.map(property => ({
+        WardName: property.WardName,
+        StreetName: property.StreetName,
+        AssesmentNo: property.AssesmentNo,
+        Owner_name: property.Owner_name,
+        zone: property.zone,
+        s_no: property.s_no // Include s_no for property_records update
+      }))
     };
-    console.log(postData);
 
-    // Example fetch request (uncomment and customize as needed)
     try {
       const response = await fetch(
         "https://luisnellai.xyz/siraj/admin/task_assigned.php",
@@ -266,27 +277,68 @@ const AssignTask = () => {
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to assign task");
+      const result = await response.json();
+      
+      if (!response.ok || result.status === 'error') {
+        throw new Error(result.message || "Failed to assign task");
       }
 
-      const result = await response.json();
-      alert("Task assigned successfully");
-      setLoading(false);
+      alert(result.message || "Tasks assigned successfully");
       window.location.href = "/users";
     } catch (error) {
+      alert(error.message);
       setError(error);
+    } finally {
       setLoading(false);
     }
   };
   const handleBack = () => {
     window.location.href = "/users";
   };
+
+  const handlePageChange = (event, value) => {
+    setPage(value);
+  };
+
+  const handlePerPageChange = (event) => {
+    setPerPage(event.target.value);
+    setPage(1);
+  };
+
+  const getSerialNumber = (index) => {
+    return ((page - 1) * perPage) + index + 1;
+  };
+
+  const getCurrentProperties = () => {
+    const startIndex = (page - 1) * perPage;
+    const endIndex = startIndex + perPage;
+    return filteredProperties.slice(startIndex, endIndex);
+  };
+
+  const getRecordsInfo = () => {
+    const startIndex = (page - 1) * perPage + 1;
+    const endIndex = Math.min(page * perPage, filteredProperties.length);
+    return `Showing ${startIndex} - ${endIndex} of ${filteredProperties.length} records`;
+  };
+
   if (loading) {
     return (
-      <Container sx={{ textAlign: "center" }}>
-        <CircularProgress />
-      </Container>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          width: '100%',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          zIndex: 9999
+        }}
+      >
+        <CircularProgress size={60} style={{ color: "#eb3f2f" }} />
+      </Box>
     );
   }
 
@@ -481,20 +533,41 @@ const AssignTask = () => {
           Add Ward and Street
         </Button>
 
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+          <FormControl variant="outlined" size="small">
+            <InputLabel>Rows per page</InputLabel>
+            <Select
+              value={perPage}
+              onChange={handlePerPageChange}
+              label="Rows per page"
+              sx={{ minWidth: 120 }}
+            >
+              <MenuItem value={50}>50</MenuItem>
+              <MenuItem value={100}>100</MenuItem>
+              <MenuItem value={200}>200</MenuItem>
+              <MenuItem value={500}>500</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Typography variant="body2" color="text.secondary">
+            {getRecordsInfo()}
+          </Typography>
+        </Box>
+
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Property ID</TableCell>
+                <TableCell>S.No</TableCell>
                 <TableCell>Ward Name</TableCell>
                 <TableCell>Street Name</TableCell>
                 <TableCell>Assessment Number</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredProperties.map((property) => (
+              {getCurrentProperties().map((property, index) => (
                 <TableRow key={property.id}>
-                  <TableCell>{property.s_no}</TableCell>
+                  <TableCell>{getSerialNumber(index)}</TableCell>
                   <TableCell>{property.WardName}</TableCell>
                   <TableCell>{property.StreetName}</TableCell>
                   <TableCell>{property.AssesmentNo}</TableCell>
@@ -503,6 +576,18 @@ const AssignTask = () => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+            size="large"
+            showFirstButton
+            showLastButton
+          />
+        </Box>
 
         <Button variant="contained" onClick={handleSubmit} sx={{ mt: 2 }}>
           Assign Task

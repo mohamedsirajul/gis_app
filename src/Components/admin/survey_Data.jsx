@@ -29,6 +29,8 @@ import {
   Checkbox,
   ListItemText,
   OutlinedInput,
+  Box,
+  Pagination,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -48,28 +50,58 @@ const ViewSurvey = () => {
   const [newGisId, setNewGisId] = useState('');
   const [showNewGisInput, setShowNewGisInput] = useState(false);
   const [allGisIds, setAllGisIds] = useState([]);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const fetchProperties = async (currentPage = page, recordsPerPage = perPage) => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `https://luisnellai.xyz/siraj/getallbuildingdata.php/${user_id}?page=${currentPage}&per_page=${recordsPerPage}`
+      );
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const data = await response.json();
+      console.log(data);
+      if (data.status === "success") {
+        setProperties(data.properties || []);
+        setTotalPages(data.pagination.total_pages);
+        setTotalRecords(data.pagination.total_records);
+      } else {
+        throw new Error(data.message || "Failed to fetch properties");
+      }
+      setLoading(false);
+    } catch (error) {
+      setError(error);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        const response = await fetch(
-          `https://luisnellai.xyz/siraj/getallbuildingdata.php/${user_id}`
-        );
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        const data = await response.json();
-        console.log(data);
-        setProperties(data.properties || []); // Ensure data.properties is defined or default to an empty array
-        setLoading(false);
-      } catch (error) {
-        setError(error);
-        setLoading(false);
-      }
-    };
-
     fetchProperties();
   }, [user_id]);
+
+  const handlePageChange = (event, value) => {
+    setPage(value);
+    fetchProperties(value, perPage);
+  };
+
+  const handlePerPageChange = (event) => {
+    const newPerPage = event.target.value;
+    setPerPage(newPerPage);
+    setPage(1);
+    fetchProperties(1, newPerPage);
+  };
+
+  const getRecordsInfo = () => {
+    const startIndex = (page - 1) * perPage + 1;
+    const endIndex = Math.min(page * perPage, totalRecords);
+    return `Showing ${startIndex} - ${endIndex} of ${totalRecords} records`;
+  };
+
   const handleBack = () => {
     window.location.href = "/users";
   };
@@ -160,7 +192,24 @@ const ViewSurvey = () => {
   };
 
   if (loading) {
-    return <CircularProgress />;
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          width: '100%',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          zIndex: 9999
+        }}
+      >
+        <CircularProgress size={60} style={{ color: "#eb3f2f" }} />
+      </Box>
+    );
   }
 
   if (error) {
@@ -190,154 +239,186 @@ const ViewSurvey = () => {
             No properties found for user ID {user_id}
           </Alert>
         ) : (
-          <TableContainer component={Paper} style={{ marginTop: "20px" }}>
-            <Table sx={{ minWidth: 650 }} aria-label="building-data-table">
-              <TableHead>
-                <TableRow>
-                  <TableCell>S.No</TableCell>
-                  <TableCell>Ward_Name</TableCell>
-                  <TableCell>Street_Name</TableCell>
-                  <TableCell>Ownership</TableCell>
-                  <TableCell>B_Type</TableCell>
-                  <TableCell>GIS_ID</TableCell>
-                  <TableCell>AssessmentNo</TableCell>
-                  <TableCell>oldAssessmentNo</TableCell>
-                  <TableCell>Plt_Area</TableCell>
-                  <TableCell>Door_Num</TableCell>
-                  <TableCell>Owner Name</TableCell>
-                  <TableCell>Mobile</TableCell>
-                  <TableCell>Address</TableCell>
-                  {/* <TableCell>Usage</TableCell> */}
-                  <TableCell>Total Floors</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {properties.map((property, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{property.Ward}</TableCell>
-                    <TableCell>{property.Street}</TableCell>
-                    <TableCell>{property.property_ownership}</TableCell>
-                    <TableCell>{property.buildingtype}</TableCell>
-                    <TableCell>{property.Gisid}</TableCell>
-                    <TableCell>{property.AssessmentNo}</TableCell>
-                    <TableCell>{property.oldAssessmentNo}</TableCell>
-                    <TableCell>{property.areaofplot}</TableCell>
-                    <TableCell>{property.DoorNo}</TableCell>
-                    <TableCell>{property.Owner}</TableCell>
-                    <TableCell>{property.Mobile}</TableCell>
-                    <TableCell>
-                      {property.address1}, {property.address2}
-                    </TableCell>
-                    {/* <TableCell>{property.usage}</TableCell> */}
-                    <TableCell>{property.TotalFloor}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<VisibilityIcon />}
-                        onClick={() =>
-                          handleOpenDialog(
-                            "Floor Information",
-                            <Table>
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell>Area</TableCell>
-                                  <TableCell>Establishment</TableCell>
-                                  <TableCell>Establishment Name</TableCell>
-                                  <TableCell>Flat No</TableCell>
-                                  <TableCell>Floor</TableCell>
-                                  <TableCell>Occupancy</TableCell>
-                                  <TableCell>Usage</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {property.floorInformation.map(
-                                  (floor, floorIndex) => (
-                                    <TableRow key={floorIndex}>
-                                      <TableCell>{floor.area}</TableCell>
-                                      <TableCell>
-                                        {floor.establishment}
-                                      </TableCell>
-                                      <TableCell>
-                                        {floor.establishmentName}
-                                      </TableCell>
-                                      <TableCell>{floor.flatNo}</TableCell>
-                                      <TableCell>{floor.floor}</TableCell>
-                                      <TableCell>{floor.occupancy}</TableCell>
-                                      <TableCell>{floor.usage}</TableCell>
-                                    </TableRow>
-                                  )
-                                )}
-                              </TableBody>
-                            </Table>
-                          )
-                        }
-                      >
-                        Floor
-                      </Button>
-                      <br></br>
-                      <br></br>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<VisibilityIcon />}
-                        onClick={() =>
-                          handleOpenDialog(
-                            "Facility Details",
-                            <DialogContentText>
-                              <strong>Hoarding:</strong> {property.Hoarding}
-                              <br />
-                              <strong>Mobile Tower:</strong>{" "}
-                              {property.MobileTower}
-                              <br />
-                              <strong>Ramp:</strong> {property.ramp}
-                              <br />
-                              <strong>Area of Plot:</strong>{" "}
-                              {property.areaofplot}
-                              <br />
-                              <strong>Head Rooms:</strong> {property.headRooms}
-                              <br />
-                              <strong>Lift Rooms:</strong> {property.liftRooms}
-                              <br />
-                              <strong>Location:</strong> {property.location}
-                              <br />
-                              <strong>OHT:</strong> {property.oht}
-                              <br />
-                              <strong>Parking:</strong> {property.parking}
-                            </DialogContentText>
-                          )
-                        }
-                      >
-                        Facility
-                      </Button>
-                      <br></br>
-                      <br></br>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<VisibilityIcon />}
-                        onClick={() =>
-                          handleOpenDialog(
-                            "View Image",
-                            <CardMedia
-                              component="img"
-                              height="400"
-                              image={property.image_url}
-                              alt={property.BuildingName}
-                            />
-                          )
-                        }
-                      >
-                        View_Image
-                      </Button>
-                    </TableCell>
+          <>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', my: 2 }}>
+              <FormControl variant="outlined" size="small">
+                <InputLabel>Rows per page</InputLabel>
+                <Select
+                  value={perPage}
+                  onChange={handlePerPageChange}
+                  label="Rows per page"
+                  sx={{ minWidth: 120 }}
+                >
+                  <MenuItem value={50}>50</MenuItem>
+                  <MenuItem value={100}>100</MenuItem>
+                  <MenuItem value={200}>200</MenuItem>
+                  <MenuItem value={500}>500</MenuItem>
+                </Select>
+              </FormControl>
+              <Typography variant="body2" color="text.secondary">
+                {getRecordsInfo()}
+              </Typography>
+            </Box>
+
+            <TableContainer component={Paper} style={{ marginTop: "20px" }}>
+              <Table sx={{ minWidth: 650 }} aria-label="building-data-table">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>S.No</TableCell>
+                    <TableCell>Ward_Name</TableCell>
+                    <TableCell>Street_Name</TableCell>
+                    <TableCell>Ownership</TableCell>
+                    <TableCell>B_Type</TableCell>
+                    <TableCell>GIS_ID</TableCell>
+                    <TableCell>AssessmentNo</TableCell>
+                    <TableCell>oldAssessmentNo</TableCell>
+                    <TableCell>Plt_Area</TableCell>
+                    <TableCell>Door_Num</TableCell>
+                    <TableCell>Owner Name</TableCell>
+                    <TableCell>Mobile</TableCell>
+                    <TableCell>Address</TableCell>
+                    {/* <TableCell>Usage</TableCell> */}
+                    <TableCell>Total Floors</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {properties.map((property, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{property.Ward}</TableCell>
+                      <TableCell>{property.Street}</TableCell>
+                      <TableCell>{property.property_ownership}</TableCell>
+                      <TableCell>{property.buildingtype}</TableCell>
+                      <TableCell>{property.Gisid}</TableCell>
+                      <TableCell>{property.AssessmentNo}</TableCell>
+                      <TableCell>{property.oldAssessmentNo}</TableCell>
+                      <TableCell>{property.areaofplot}</TableCell>
+                      <TableCell>{property.DoorNo}</TableCell>
+                      <TableCell>{property.Owner}</TableCell>
+                      <TableCell>{property.Mobile}</TableCell>
+                      <TableCell>
+                        {property.address1}, {property.address2}
+                      </TableCell>
+                      {/* <TableCell>{property.usage}</TableCell> */}
+                      <TableCell>{property.TotalFloor}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={<VisibilityIcon />}
+                          onClick={() =>
+                            handleOpenDialog(
+                              "Floor Information",
+                              <Table>
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell>Floor</TableCell>
+                                    <TableCell>Area (sqft)</TableCell>
+                                    <TableCell>Occupancy</TableCell>
+                                    <TableCell>Area Calculation</TableCell>
+                                    <TableCell>Percentage Used</TableCell>
+                                    <TableCell>Usage</TableCell>
+                                    <TableCell>Tax</TableCell>
+                                    <TableCell>Prof Tax No</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {property.floorInformation.map(
+                                    (floor, floorIndex) => (
+                                      <TableRow key={floor.id}>
+                                        <TableCell>{floor.floor}</TableCell>
+                                        <TableCell>{floor.area}</TableCell>
+                                        <TableCell>{floor.occupancy}</TableCell>
+                                        <TableCell>{floor.area_calculation}</TableCell>
+                                        <TableCell>{floor.percentage_used}</TableCell>
+                                        <TableCell>{floor.usage}</TableCell>
+                                        <TableCell>{floor.tax}</TableCell>
+                                        <TableCell>{floor.prof_tax_no}</TableCell>
+                                      </TableRow>
+                                    )
+                                  )}
+                                </TableBody>
+                              </Table>
+                            )
+                          }
+                        >
+                          Floor
+                        </Button>
+                        <br></br>
+                        <br></br>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={<VisibilityIcon />}
+                          onClick={() =>
+                            handleOpenDialog(
+                              "Facility Details",
+                              <DialogContentText>
+                                <strong>Hoarding:</strong> {property.Hoarding}
+                                <br />
+                                <strong>Mobile Tower:</strong>{" "}
+                                {property.MobileTower}
+                                <br />
+                                <strong>Ramp:</strong> {property.ramp}
+                                <br />
+                                <strong>Area of Plot:</strong>{" "}
+                                {property.areaofplot}
+                                <br />
+                                <strong>Head Rooms:</strong> {property.headRooms}
+                                <br />
+                                <strong>Lift Rooms:</strong> {property.liftRooms}
+                                <br />
+                                <strong>Location:</strong> {property.location}
+                                <br />
+                                <strong>OHT:</strong> {property.oht}
+                                <br />
+                                <strong>Parking:</strong> {property.parking}
+                              </DialogContentText>
+                            )
+                          }
+                        >
+                          Facility
+                        </Button>
+                        <br></br>
+                        <br></br>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={<VisibilityIcon />}
+                          onClick={() =>
+                            handleOpenDialog(
+                              "View Image",
+                              <CardMedia
+                                component="img"
+                                height="400"
+                                image={property.image_url}
+                                alt={property.BuildingName}
+                              />
+                            )
+                          }
+                        >
+                          View_Image
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={handlePageChange}
+                color="primary"
+                size="large"
+                showFirstButton
+                showLastButton
+              />
+            </Box>
+          </>
         )}
       </Container>
       <Dialog

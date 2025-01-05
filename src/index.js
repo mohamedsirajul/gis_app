@@ -99,6 +99,7 @@ const renderRoutes = () => {
         <Route path="/viewTask/:user_id" element={<ViewTask />} />
         <Route path="/viewSurvey/:user_id" element={<ViewSurvey />} />
         <Route path="/filterad" element={<FilterAd />} />
+        <Route path="/addpropcsv" element={<AddCsv />} />
         <Route path="*" element={<Navigate to="/users" replace />} />
       </Routes>
     );

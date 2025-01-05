@@ -357,15 +357,14 @@ const Surveyors = () => {
       <Container>
         {/* Toolbar */}
         {/* Main content */}
-        {/* <Button
+        <Button
           variant="contained"
           color="primary"
-          style={{ marginBottom: "1rem" }}
-          onClick={handleOpenDialog}
-          endIcon={<AddIcon />}
+          style={{ marginBottom: "1rem", marginRight: "1rem" }}
+          onClick={() => window.location.href = "/addpropcsv"}
         >
-          Add Surveyor
-        </Button> */}
+          Add Property CSV
+        </Button>
         
         <Row xs={1} md={2} className="g-4">
           {surveyors.map((surveyor) => (

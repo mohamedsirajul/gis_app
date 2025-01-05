@@ -342,19 +342,19 @@ const Fad = () => {
               </Typography>
             </Box>
 
-            <Card variant="outlined" style={{ marginTop: "20px" }}>
-              <CardContent>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <Typography variant="h6" component="h3" style={{ marginTop: "20px", textAlign: "center" }}>
-                    <b>Assessment Tax Estimation</b>
-                  </Typography>
+        <Card variant="outlined" style={{ marginTop: "20px" }}>
+          <CardContent>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+  <Typography variant="h6" component="h3" style={{ marginTop: "20px", textAlign: "center" }}>
+    <b>Assessment Tax Estimation</b>
+  </Typography>
                   <Button style={{ marginTop: "20px", backgroundColor: "#f05b4d", color: "white" }} onClick={FilterAd}>
                     Filter Assessments Information
                   </Button>
-                </div>
+</div>
 
-                <TableContainer component={Paper} style={{ marginTop: "20px" }}>
-                  <Table>
+            <TableContainer component={Paper} style={{ marginTop: "20px" }}>
+              <Table>
                     <TableHead>
                       <TableRow style={{ backgroundColor: "#f05b4d", border: "2px solid black" }}>
                         <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>S.No</TableCell>
@@ -365,23 +365,23 @@ const Fad = () => {
                         <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>Total Area (in Sq.ft)</TableCell>
                         <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>Roof Area (Drone Survey in Sq.ft)</TableCell>
                         <TableCell sx={{ border: "2px solid black", color: "white", fontWeight: "bold" }}>View Tax Details</TableCell>
-                      </TableRow>
-                    </TableHead>
+                  </TableRow>
+                </TableHead>
                     <TableBody>
                       {data && data.map((item, index) =>
-                        item.floors.map((floor, floorIndex) =>
-                          floor.floordetails.map((detail, detailIndex) => (
+                    item.floors.map((floor, floorIndex) =>
+                      floor.floordetails.map((detail, detailIndex) => (
                             <TableRow key={`${item.gisid}-${floorIndex}-${detailIndex}`}>
-                              {detailIndex === 0 && (
+                          {detailIndex === 0 && (
                                 <TableCell rowSpan={floor.floordetails.length} sx={{ border: "2px solid black" }}>
                                   {getSerialNumber(index)}
-                                </TableCell>
-                              )}
-                              {detailIndex === 0 && (
+                            </TableCell>
+                          )}
+                          {detailIndex === 0 && (
                                 <TableCell rowSpan={floor.floordetails.length} sx={{ border: "2px solid black" }}>
                                   {item.gisid}
-                                </TableCell>
-                              )}
+                            </TableCell>
+                          )}
                               <TableCell sx={{ border: "2px solid black" }}>{detail.properties.AssessmentNo}</TableCell>
                               <TableCell sx={{ border: "2px solid black" }}>{floor.floor}</TableCell>
                               <TableCell sx={{ border: "2px solid black" }}>{detail.area}</TableCell>
@@ -402,13 +402,13 @@ const Fad = () => {
                                   View Tax Details
                                 </Button>
                               </TableCell>
-                            </TableRow>
-                          ))
-                        )
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                        </TableRow>
+                      ))
+                    )
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
 
                 <Box
                   sx={{
@@ -429,8 +429,8 @@ const Fad = () => {
                     showLastButton
                   />
                 </Box>
-              </CardContent>
-            </Card>
+          </CardContent>
+        </Card>
           </>
         )}
         <Dialog
