@@ -34,6 +34,8 @@
     import { CSVLink } from "react-csv";
     import GetAppIcon from '@mui/icons-material/GetApp';
 import { Margin } from "@mui/icons-material";
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
     const FilterAd = () => {
     const [properties, setProperties] = useState([]);
@@ -48,6 +50,8 @@ import { Margin } from "@mui/icons-material";
   const [totalRecords, setTotalRecords] = useState(0);
   const [selectedWard, setSelectedWard] = useState('');
   const [wardList, setWardList] = useState([]);
+  const [sortField, setSortField] = useState('');
+  const [sortOrder, setSortOrder] = useState('asc');
 
   useEffect(() => {
     const fetchWards = async () => {
@@ -318,6 +322,52 @@ import { Margin } from "@mui/icons-material";
     return `Showing ${start} - ${end} of ${totalRecords} records`;
   };
 
+  const handleSort = (field) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortField(field);
+    
+    const sortedProperties = [...properties].sort((a, b) => {
+      let aValue = a[field];
+      let bValue = b[field];
+      
+      // Special handling for GIS ID sorting
+      if (field === 'Gisid') {
+        // Extract the number after the hyphen for comparison
+        const aMatch = aValue ? aValue.toString().split('-')[1] : '';
+        const bMatch = bValue ? bValue.toString().split('-')[1] : '';
+        
+        // Convert to numbers for numerical comparison
+        const aNum = aMatch ? parseInt(aMatch, 10) : 0;
+        const bNum = bMatch ? parseInt(bMatch, 10) : 0;
+        
+        // First compare ward numbers (before hyphen)
+        const aWard = aValue ? parseInt(aValue.toString().split('-')[0], 10) : 0;
+        const bWard = bValue ? parseInt(bValue.toString().split('-')[0], 10) : 0;
+        
+        // If wards are different, sort by ward
+        if (aWard !== bWard) {
+          return sortOrder === 'asc' ? aWard - bWard : bWard - aWard;
+        }
+        
+        // If wards are same, sort by the number after hyphen
+        return sortOrder === 'asc' ? aNum - bNum : bNum - aNum;
+      }
+      
+      // Regular string comparison for other fields
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    setProperties(sortedProperties);
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) return null;
+    return sortOrder === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />;
+  };
+
   if (loading) {
     return (
       <Box
@@ -419,8 +469,40 @@ import { Margin } from "@mui/icons-material";
         <TableHead>
             <TableRow>
             <TableCell sx={{ border: "2px solid black", backgroundColor: "#eb3f2f", color: "white" }}>S.No</TableCell>
-                    <TableCell sx={{ border: "2px solid black", backgroundColor: "#eb3f2f", color: "white" }}>GIS ID</TableCell>
-            <TableCell sx={{ border: "2px solid black", backgroundColor: "#eb3f2f", color: "white" }}>Ward Name</TableCell>
+                    <TableCell 
+                      sx={{ 
+                        border: "2px solid black", 
+                        backgroundColor: "#eb3f2f", 
+                        color: "white",
+                        cursor: "pointer",
+                        '&:hover': {
+                          opacity: 0.8,
+                        },
+                      }}
+                      onClick={() => handleSort('Gisid')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        GIS ID
+                        {getSortIcon('Gisid')}
+                      </Box>
+                    </TableCell>
+            <TableCell 
+              sx={{ 
+                border: "2px solid black", 
+                backgroundColor: "#eb3f2f", 
+                color: "white",
+                cursor: "pointer",
+                '&:hover': {
+                  opacity: 0.8,
+                },
+              }}
+              onClick={() => handleSort('Ward')}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                Ward Name
+                {getSortIcon('Ward')}
+              </Box>
+            </TableCell>
             <TableCell sx={{ border: "2px solid black", backgroundColor: "#eb3f2f", color: "white" }}>Street Name</TableCell>
             <TableCell sx={{ border: "2px solid black", backgroundColor: "#eb3f2f", color: "white" }}>Ownership</TableCell>
             <TableCell sx={{ border: "2px solid black", backgroundColor: "#eb3f2f", color: "white" }}>Building Type</TableCell>
